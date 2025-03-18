@@ -1,0 +1,5 @@
+FROM taoufikel/ml-energy-cpu
+
+RUN pip install imbalanced-learn
+
+WORKDIR /workspace
