@@ -4,7 +4,6 @@ llm.py
 
 This script does the following:
 1. Finetunes a small GPT-2 model (distilgpt2) on an SSE dataset created by taking sentences from the course content on Brightspace.
-2. Performs quick inference (text generation)
 
 Requires:
     pip install transformers[torch]
