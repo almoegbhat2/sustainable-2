@@ -4,6 +4,7 @@ llm.py
 
 This script does the following:
 1. Finetunes a small GPT-2 model (distilgpt2) on an SSE dataset created by taking sentences from the course content on Brightspace.
+2. Performs quick inference (text generation)
 
 Requires:
     pip install transformers[torch]
@@ -39,28 +40,28 @@ def main():
         "Green Software Metrics include measures such as energy in joules, power in watts, and carbon emissions in grams.",
         "Carbon-aware datacenters optimize workload scheduling based on real-time carbon intensity data.",
         "The concept of red AI emphasizes maximizing model accuracy at the expense of increased energy and financial costs.",
-        "Green AI seeks to balance high model performance with lower energy consumption and environmental impact.",
-        "Techniques such as model simplification, hyperparameter tuning, and distillation can help reduce energy usage in AI training.",
-        "A Firefox extension can provide real-time feedback on the estimated carbon emissions of AI models.",
-        "HuggingFace’s AutoTrain feature automatically reports CO2 equivalent emissions during model training.",
-        "Linear regression models can be used to estimate carbon emissions based on parameters like dataset size and model size.",
-        "A shift toward efficiency over raw accuracy is vital for sustainable AI research.",
-        "Reporting carbon emissions transparently is essential for accountability in AI development.",
-        "The carbon intensity of electricity varies by energy source, with renewables generally having lower values than fossil fuels.",
-        "Code Carbon is a tool that estimates CO2 emissions based on measured energy consumption.",
-        "Benchmarking energy consumption requires careful experimental design and statistical analysis.",
-        "Violin plots and box plots are effective visual tools to understand the distribution of energy usage data.",
-        "Multiple iterations of energy experiments improve the reliability of consumption measurements.",
-        "Reproducibility and control of confounding factors are key in scientific energy measurement experiments.",
-        "Scientific guides provide methodologies for reliable energy experiments in software systems.",
-        "Statistical significance tests, like the Shapiro-Wilk and Mann-Whitney U tests, help validate energy data.",
-        "Energy Delay Product (EDP) is a combined metric that penalizes long runtimes and high energy consumption.",
-        "The integration of energy testing into CI/CD pipelines can help track efficiency improvements over time.",
-        "Efficient data structures and algorithms can lower CPU usage and overall energy consumption.",
-        "Software refactoring aimed at reducing energy consumption can also extend the battery life of mobile devices.",
-        "Green computing practices are becoming an important competitive factor for environmentally conscious companies.",
-        "The social dimension of sustainability includes ensuring equitable access to green technologies.",
-        "Technical sustainability focuses on building software systems that are resilient and adaptable over time." #,
+        "Green AI seeks to balance high model performance with lower energy consumption and environmental impact."#,
+        # "Techniques such as model simplification, hyperparameter tuning, and distillation can help reduce energy usage in AI training.",
+        # "A Firefox extension can provide real-time feedback on the estimated carbon emissions of AI models.",
+        # "HuggingFace’s AutoTrain feature automatically reports CO2 equivalent emissions during model training.",
+        # "Linear regression models can be used to estimate carbon emissions based on parameters like dataset size and model size.",
+        # "A shift toward efficiency over raw accuracy is vital for sustainable AI research.",
+        # "Reporting carbon emissions transparently is essential for accountability in AI development.",
+        # "The carbon intensity of electricity varies by energy source, with renewables generally having lower values than fossil fuels.",
+        # "Code Carbon is a tool that estimates CO2 emissions based on measured energy consumption.",
+        # "Benchmarking energy consumption requires careful experimental design and statistical analysis.",
+        # "Violin plots and box plots are effective visual tools to understand the distribution of energy usage data.",
+        # "Multiple iterations of energy experiments improve the reliability of consumption measurements.",
+        # "Reproducibility and control of confounding factors are key in scientific energy measurement experiments.",
+        # "Scientific guides provide methodologies for reliable energy experiments in software systems.",
+        # "Statistical significance tests, like the Shapiro-Wilk and Mann-Whitney U tests, help validate energy data.",
+        # "Energy Delay Product (EDP) is a combined metric that penalizes long runtimes and high energy consumption.",
+        # "The integration of energy testing into CI/CD pipelines can help track efficiency improvements over time.",
+        # "Efficient data structures and algorithms can lower CPU usage and overall energy consumption.",
+        # "Software refactoring aimed at reducing energy consumption can also extend the battery life of mobile devices.",
+        # "Green computing practices are becoming an important competitive factor for environmentally conscious companies.",
+        # "The social dimension of sustainability includes ensuring equitable access to green technologies.",
+        # "Technical sustainability focuses on building software systems that are resilient and adaptable over time." #,
         # "Economic sustainability in software engineering involves cost-efficient development and operation.",
         # "Environmental sustainability in software refers to minimizing the ecological footprint through efficient design.",
         # "Green procurement encourages choosing energy-efficient hardware and software solutions.",
@@ -108,6 +109,8 @@ def main():
         # "Practical labs on measuring energy consumption provide hands-on experience with energy profilers and monitors."
     ]
 
+    dataset = Dataset.from_dict({"text": text_lines})
+
     # Load model & tokenizer
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
@@ -152,14 +155,14 @@ def main():
     trainer.train()
     print("Finetuning complete!")
 
-    # # Inference
-    # prompt_text = "Environmental sustainability in software refers"
-    # prompt_enc = tokenizer(
-    #     prompt_text,
-    #     return_tensors="pt",
-    #     padding=True,
-    #     truncation=True
-    # )
+    # Inference
+    prompt_text = "Green AI seeks to balance high model performance with"
+    prompt_enc = tokenizer(
+        prompt_text,
+        return_tensors="pt",
+        padding=True,
+        truncation=True
+    )
 
     input_ids = prompt_enc["input_ids"]
     attention_mask = prompt_enc["attention_mask"]
