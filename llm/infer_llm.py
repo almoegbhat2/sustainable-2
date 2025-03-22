@@ -21,7 +21,7 @@ def main():
     model = GPT2LMHeadModel.from_pretrained(model_dir)
 
     # Define a prompt for inference
-    prompt_text = "Environmental sustainability in software refers"
+    prompt_text = "Green AI seeks to balance high model performance with"
     prompt_enc = tokenizer(prompt_text, return_tensors="pt", padding=True, truncation=True)
     input_ids = prompt_enc["input_ids"]
     attention_mask = prompt_enc["attention_mask"]
