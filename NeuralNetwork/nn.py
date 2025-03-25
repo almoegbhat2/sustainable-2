@@ -44,6 +44,7 @@ def main():
         X_scaled, Y_resampled, test_size=0.2, random_state=42, stratify=Y_resampled
     )
 
+    # Convert to tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).unsqueeze(1)
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
@@ -53,6 +54,7 @@ def main():
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+    # Training loop
     epochs = 50
     for epoch in range(epochs):
         model.train()
@@ -65,6 +67,7 @@ def main():
         if (epoch + 1) % 10 == 0:
             print(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
 
+    # Evaluation
     model.eval()
     with torch.no_grad():
         preds = model(X_test_tensor)
