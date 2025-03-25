@@ -26,13 +26,13 @@ def main():
                                 class_weight="balanced_subsample", random_state=42)
 
     rf.fit(X_train, y_train)
-    y_pred = rf.predict(X_test)
+    # y_pred = rf.predict(X_test)
 
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average="weighted")
+    # accuracy = accuracy_score(y_test, y_pred)
+    # f1 = f1_score(y_test, y_pred, average="weighted")
 
-    results = {"Accuracy": accuracy, "F1 Score": f1}
-    print(results)
+    # results = {"Accuracy": accuracy, "F1 Score": f1}
+    # print(results)
 
 
 if __name__ == '__main__':
