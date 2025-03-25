@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 def main():
-    with open('./Dataset/df_train.pkl', 'rb') as f:
+    with open('../Dataset/df_train.pkl', 'rb') as f:
         df_train = pickle.load(f)
 
     X = df_train.drop(['Overhype'], axis=1)
@@ -26,13 +26,7 @@ def main():
                                 class_weight="balanced_subsample", random_state=42)
 
     rf.fit(X_train, y_train)
-    y_pred = rf.predict(X_test)
-
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average="weighted")
-
-    results = {"Accuracy": accuracy, "F1 Score": f1}
-    print(results)
+    print("Random Forest Trained!")
 
 
 if __name__ == '__main__':
