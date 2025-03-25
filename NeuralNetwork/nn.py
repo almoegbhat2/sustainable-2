@@ -15,16 +15,17 @@ def main():
         df_train = pickle.load(f)
 
     X = df_train.drop(['Overhype'], axis=1)
-    Y = df_train['Overhype']
-    Y = Y.apply(lambda x: x if x in [0, 1] else 0)
+    Y = df_train['Overhype'].apply(lambda x: x if x in [0, 1] else 0)
+
     scaler = StandardScaler()
-
     smote = SMOTE(random_state=42)
-    X_train_resampled, y_train_resampled = smote.fit_resample(X, Y)
-    X_scaled = scaler.fit_transform(X_train_resampled)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_train_resampled, test_size=0.2, random_state=42,
-                                                        stratify=y_train_resampled)
+    X_resampled, Y_resampled = smote.fit_resample(X, Y)
+    X_scaled = scaler.fit_transform(X_resampled)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled, Y_resampled, test_size=0.2, random_state=42, stratify=Y_resampled
+    )
 
     input_dim = X_train.shape[1]
     tf.random.set_seed(42)
@@ -54,6 +55,7 @@ def main():
         validation_split=0.1,
         verbose=1
     )
+
 
 if __name__ == '__main__':
     main()
