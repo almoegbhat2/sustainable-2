@@ -6,8 +6,6 @@ from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, f1_score
-import numpy as np
-
 
 class SimpleNN(nn.Module):
     def __init__(self, input_size):
@@ -28,7 +26,7 @@ class SimpleNN(nn.Module):
 
 
 def main():
-    with open('./Dataset/df_train.pkl', 'rb') as f:
+    with open('repo/Dataset/df_train.pkl', 'rb') as f:
         df_train = pickle.load(f)
 
     X = df_train.drop(['Overhype'], axis=1)
@@ -67,18 +65,7 @@ def main():
         if (epoch + 1) % 10 == 0:
             print(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
 
-    # Evaluation
-    model.eval()
-    with torch.no_grad():
-        preds = model(X_test_tensor)
-        preds_class = (preds >= 0.5).float().squeeze().numpy()
-        y_true = y_test_tensor.squeeze().numpy()
-
-    acc = accuracy_score(y_true, preds_class)
-    f1 = f1_score(y_true, preds_class, average='weighted')
-
-    results = {"Accuracy": acc, "F1 Score": f1}
-    print(results)
+    print("Neural Network Training Complete!")
 
 
 if __name__ == '__main__':
