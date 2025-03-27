@@ -26,7 +26,7 @@ class SimpleNN(nn.Module):
 
 
 def main():
-    with open('repo/Dataset/df_train.pkl', 'rb') as f:
+    with open('../Dataset/df_train.pkl', 'rb') as f:
         df_train = pickle.load(f)
 
     X = df_train.drop(['Overhype'], axis=1)
