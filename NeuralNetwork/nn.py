@@ -11,19 +11,48 @@ class SimpleNN(nn.Module):
     def __init__(self, input_size):
         super(SimpleNN, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(input_size, 128),
+            nn.Linear(input_size, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
+
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
             nn.Linear(128, 64),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(64, 1),
+
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
+            nn.Linear(16, 1),
             nn.Sigmoid()
         )
 
     def forward(self, x):
         return self.network(x)
-
 
 def main():
     with open('../Dataset/df_train.pkl', 'rb') as f:
@@ -42,7 +71,6 @@ def main():
         X_scaled, Y_resampled, test_size=0.2, random_state=42, stratify=Y_resampled
     )
 
-    # Convert to tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).unsqueeze(1)
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
@@ -52,8 +80,7 @@ def main():
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    # Training loop
-    epochs = 50
+    epochs = 100
     for epoch in range(epochs):
         model.train()
         optimizer.zero_grad()
@@ -64,9 +91,6 @@ def main():
 
         if (epoch + 1) % 10 == 0:
             print(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
-
-    print("Neural Network Training Complete!")
-
 
 if __name__ == '__main__':
     main()
