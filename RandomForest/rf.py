@@ -1,7 +1,7 @@
 import pickle
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
 
@@ -22,10 +22,22 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_train_resampled, test_size=0.2, random_state=42,
                                                         stratify=y_train_resampled)
 
-    rf = RandomForestClassifier(n_estimators=300, max_depth=12, min_samples_split=5,
-                                class_weight="balanced_subsample", random_state=42)
+    param_grid = {
+        'n_estimators': [300, 500, 1000],
+        'max_depth': [24, 28, 32],
+        'min_samples_split': [2, 5, 10],
+    }
 
-    rf.fit(X_train, y_train)
+    grid_search = GridSearchCV(
+        RandomForestClassifier(class_weight="balanced_subsample", random_state=42),
+        param_grid=param_grid,
+        cv=10,
+        n_jobs=-1
+    )
+
+
+
+    grid_search.fit(X_train, y_train)
     print("Random Forest Trained!")
 
 
