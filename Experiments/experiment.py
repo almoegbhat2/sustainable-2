@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 import subprocess
 import time
 
@@ -36,21 +37,28 @@ def run_experiment(command):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 def main():
-    parser = argparse.ArgumentParser()
+    models = {
+           "RandomForest/rf.py": "rf",
+           "NeuralNetwork/nn.py": "nn",
+           "llm/finetune_llm.py": "llm"
+              }
 
-    parser.add_argument("model_name")
-    parser.add_argument("model_path")
-    args = parser.parse_args()
+    images = ["fedora-base", "ubuntu-base", "debian-base",
+             "fedora-cpu-optimized", "ubuntu-cpu-optimized", "debian-cpu-optimized"]
 
-    operating_systems = ["fedora", "ubuntu", "debian"]
+    for model_path, model_name in models.items():
+        for i in range(31):
+            #First run is warmup
+            randomize = images.copy()
+            if i > 0:
+                random.shuffle(randomize)
 
-    for i in range(31):
-        for os in operating_systems:
-            time.sleep(60)
-            docker_query = f'docker run -it --rm -v "$(pwd):/app/repo" taoufikel/ml-energy-{os}-base:latest python /app/repo/{args.model_path}'
-            full_temp_path = f'{BASE_DIR}{args.model_name}_{os}_{i}.csv'
-            command = f'{energiBridge_path}/target/release/energibridge -o {full_temp_path} --summary {docker_query}'
-            run_experiment(command)
+            for image in randomize:
+                time.sleep(60)
+                docker_query = f'docker run -it --rm -v "$(pwd):/app/repo" taoufikel/ml-energy-{image}:latest python /app/repo/{model_path}'
+                full_temp_path = f'{BASE_DIR}{model_name}_{image}_{i}.csv'
+                command = f'{energiBridge_path}/target/release/energibridge -o {full_temp_path} --summary {docker_query}'
+                run_experiment(command)
 
 
 

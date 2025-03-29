@@ -5,7 +5,6 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, f1_score
 
 class SimpleNN(nn.Module):
     def __init__(self, input_size):
@@ -55,7 +54,7 @@ class SimpleNN(nn.Module):
         return self.network(x)
 
 def main():
-    with open('../Dataset/df_train.pkl', 'rb') as f:
+    with open('repo/Dataset/df_train.pkl', 'rb') as f:
         df_train = pickle.load(f)
 
     X = df_train.drop(['Overhype'], axis=1)
@@ -80,7 +79,7 @@ def main():
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    epochs = 100
+    epochs = 1000
     for epoch in range(epochs):
         model.train()
         optimizer.zero_grad()
