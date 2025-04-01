@@ -2,13 +2,16 @@
 """
 llm.py
 
-This script does the following:
-1. Finetunes a small GPT-2 model (distilgpt2) on an SSE dataset created by taking sentences from the course content on Brightspace.
-2. Performs quick inference (text generation)
+This script fine-tunes a small GPT-2 model (distilgpt2) on a sustainable software engineering (SSE) dataset
+and performs inference to demonstrate generation capabilities.
 
-Requires:
-    pip install transformers[torch]
+Dependencies:
     pip install torch transformers datasets
+
+Steps Performed:
+1. Load a custom SSE text dataset.
+2. Fine-tune the GPT-2 model (distilgpt2).
+3. Generate a completion for a prompt using the fine-tuned model.
 """
 
 import os
@@ -22,14 +25,16 @@ from transformers import (
 )
 from datasets import Dataset
 
+
 def main():
-    # Configurable hyperparameters
-    model_name = "distilgpt2"  # Smaller GPT-2 variant
+    # === CONFIGURATION ===
+    model_name = "distilgpt2"  # Pretrained small GPT-2
     output_dir = "small-llm-output"
     num_train_epochs = 2
     batch_size = 2
 
-    # Prepare dataset
+    # === Dataset ===
+    # A list of example sentences taken from SSE course content
     text_lines = [
         "Sustainable Software Engineering integrates environmental, economic, technical, individual, and social sustainability goals.",
         "Green computing practices aim to reduce the carbon footprint of digital services and infrastructures.",
@@ -111,23 +116,24 @@ def main():
 
     dataset = Dataset.from_dict({"text": text_lines})
 
-    # Load model & tokenizer
+    # === Tokenization ===
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
 
-    # Tokenize
     def tokenize_fn(examples):
         return tokenizer(examples["text"], truncation=True, padding=True)
 
     tokenized_dataset = dataset.map(tokenize_fn, batched=True)
 
+    # === Data Collator ===
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False
     )
 
-    # Model initialization
+    # === Model Loading ===
     model = GPT2LMHeadModel.from_pretrained(model_name)
 
+    # === Training Configuration ===
     training_args = TrainingArguments(
         output_dir=output_dir,
         overwrite_output_dir=True,
@@ -139,8 +145,7 @@ def main():
         logging_dir="logs",
         do_train=True,
         do_eval=False,
-        report_to="none",  # <--- prevents W&B from being used
-
+        report_to="none"
     )
 
     trainer = Trainer(
@@ -150,12 +155,12 @@ def main():
         train_dataset=tokenized_dataset
     )
 
-    # Finetuning
+    # === Training ===
     print("Starting finetuning on SSE dataset...")
     trainer.train()
     print("Finetuning complete!")
 
-    # Inference
+    # === Inference ===
     prompt_text = "Green AI seeks to balance high model performance with"
     prompt_enc = tokenizer(
         prompt_text,
@@ -181,6 +186,7 @@ def main():
     generated_text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
     print("Input prompt:", prompt_text)
     print("Generated text:", generated_text)
+
 
 if __name__ == "__main__":
     main()

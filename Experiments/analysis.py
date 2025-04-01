@@ -1,3 +1,20 @@
+"""
+analysis.py
+
+This script analyzes the energy consumption of different ML workloads (LLM, NN, RF) run inside Docker containers across
+various OS and image types. It performs the following tasks:
+
+1. Loads CSV logs containing energy and power usage.
+2. Detects outliers using IQR filtering.
+3. Computes energy per run and power usage over time.
+4. Applies normality and significance testing (Welch’s t-test or Mann-Whitney U).
+5. Generates violin and time-series plots for comparative analysis.
+6. Produces summary tables and saves outputs to the 'output/' directory.
+
+Dependencies:
+    pip install pandas numpy matplotlib scipy scikit-learn imbalanced-learn
+"""
+
 import os
 import pandas as pd
 import numpy as np
@@ -5,7 +22,9 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 from scipy.interpolate import interp1d
 
-# Configuration
+"""
+Configuration
+"""
 RESULTS_DIR = "results"
 OUTPUT_DIR = "output"
 MODELS = ["llm", "nn", "rf"]
@@ -17,7 +36,6 @@ TIME_GRID_POINTS = 100
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Color mapping for operating systems and line style mapping for image types.
 os_colors = {
     "ubuntu": "blue",
     "fedora": "green",
@@ -28,12 +46,23 @@ image_linestyles = {
     "cpu-optimized": "dashed"
 }
 
-# ----- Simplified Data Loading and Energy Computation -----
 def load_data(filepath):
-    # Now, each file corresponds to one run, so we simply load it.
+    """
+    Load data from a csv given a filepath
+    """
     return pd.read_csv(filepath)
 
 def get_cumulative_time_and_power(df):
+    """
+    Computes cumulative time and extracts power usage.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame with time intervals and power values.
+
+    Returns:
+        tuple: (cumulative time in seconds, power values)
+    """
+
     """
     Computes cumulative time from the first column (time intervals in ms),
     converts the time to seconds, and extracts power usage from the
@@ -41,21 +70,36 @@ def get_cumulative_time_and_power(df):
     Returns (cumulative_time_in_sec, power_usage).
     """
     cum_time_ms = np.cumsum(df.iloc[:, 0].values)
-    # Convert milliseconds to seconds.
     cum_time = cum_time_ms / 1000.0
     power = df["SYSTEM_POWER (Watts)"].values
     return cum_time, power
 
 def compute_energy(filepath):
-    # Load data and compute energy consumption for the run.
+    """
+    Computes total energy consumption from a CSV file.
+
+    Parameters:
+        filepath (str): Path to the CSV file.
+
+    Returns:
+        float: Total energy consumption (Joules).
+    """
     df = load_data(filepath)
-    # Compute energy as (first_column / 1000) * SYSTEM_POWER (Watts) for all rows, then sum it up.
     df["energy"] = (df.iloc[:, 0] / 1000) * df["SYSTEM_POWER (Watts)"]
     return df["energy"].sum()
 
 
-# ----- Outlier Detection using IQR -----
 def detect_outliers(series, multiplier=IQR_MULTIPLIER):
+    """
+    Identifies outliers using the Interquartile Range (IQR) method.
+
+    Parameters:
+        series (pd.Series): Series of numeric values.
+        multiplier (float): IQR multiplier for thresholding.
+
+    Returns:
+        list: Indices of detected outliers.
+    """
     Q1 = series.quantile(0.25)
     Q3 = series.quantile(0.75)
     IQR = Q3 - Q1
@@ -64,8 +108,16 @@ def detect_outliers(series, multiplier=IQR_MULTIPLIER):
     return series[(series < lower_bound) | (series > upper_bound)].index.tolist()
 
 
-# ----- Statistical Test Functions -----
 def check_normality(series):
+    """
+    Checks whether a dataset follows a normal distribution.
+
+    Parameters:
+        series (pd.Series): Data to test.
+
+    Returns:
+        bool: True if normally distributed, False otherwise.
+    """
     if len(series) >= 8:
         _, p = stats.normaltest(series)
         return p > 0.05
@@ -73,6 +125,16 @@ def check_normality(series):
 
 
 def significance_test(g1, g2, normal1, normal2):
+    """
+    Performs a statistical test to compare two datasets.
+
+    Parameters:
+        g1, g2 (pd.Series): Datasets to compare.
+        normal1, normal2 (bool): Normality flags for each dataset.
+
+    Returns:
+        tuple: (test name, statistic, p-value)
+    """
     if normal1 and normal2:
         stat, p = stats.ttest_ind(g1, g2, equal_var=False)
         return "Welch’s t-test", stat, p
@@ -81,8 +143,17 @@ def significance_test(g1, g2, normal1, normal2):
         return "Mann-Whitney U test", stat, p
 
 
-# ----- Plotting Functions -----
 def plot_violin(data, labels, title, filename):
+    """
+    Plots a violin chart comparing multiple datasets.
+
+    Parameters:
+        data (list): List of data arrays to plot.
+        labels (list): Labels for each dataset.
+        title (str): Plot title.
+        filename (str): Output filename.
+    """
+
     fig, ax = plt.subplots(figsize=(8, 6))
     parts = ax.violinplot(data, showmeans=False, showmedians=True)
     colors = ["#1f77b4", "#2ca02c", "#ff7f0e"]
@@ -102,8 +173,20 @@ def plot_violin(data, labels, title, filename):
     plt.close()
 
 
-# ----- Time Series Aggregation Functions -----
 def aggregate_time_series(model, os_name, image_type, runs=RUNS):
+    """
+    Aggregates energy data over time across multiple runs for one model/OS/image type.
+
+    Parameters:
+        model (str): Model name.
+        os_name (str): Operating system.
+        image_type (str): Docker image type.
+        runs (int): Number of experimental runs.
+
+    Returns:
+        tuple: (common time grid, average energy over time)
+    """
+
     all_times = []
     all_values = []
     for run in range(runs):
@@ -115,8 +198,7 @@ def aggregate_time_series(model, os_name, image_type, runs=RUNS):
             df = load_data(filepath)
             time_col = df.columns[1]
             times = df[time_col].values
-            times = times - times[0]  # align to 0
-            # Here, we'll use computed energy as a constant time series since each file is one run.
+            times = times - times[0]
             energy = compute_energy(filepath)
             values = np.full_like(times, energy, dtype=float)
             all_times.append(times)
@@ -143,6 +225,20 @@ def aggregate_time_series(model, os_name, image_type, runs=RUNS):
 
 def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_points=TIME_GRID_POINTS):
     """
+    Computes the average power time series across multiple runs, excluding outliers.
+
+    Parameters:
+        model (str): Model name.
+        os_name (str): Operating system.
+        image_type (str): Docker image type.
+        runs (int): Number of runs.
+        grid_points (int): Number of interpolation points for time alignment.
+
+    Returns:
+        tuple: (interpolated time grid, average power)
+    """
+
+    """
     For a given model, OS, and image_type, this function:
     - Loads each run file.
     - Computes cumulative time (in seconds) and power usage.
@@ -152,6 +248,7 @@ def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_poin
     - Averages the interpolated curves.
     Returns (common_time, avg_power_usage).
     """
+
     run_time_series = []
     run_power_series = []
     run_means = []
@@ -173,7 +270,6 @@ def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_poin
     if not run_time_series:
         return None, None
 
-    # Remove outlier runs based on mean power (IQR method)
     run_means_series = pd.Series(run_means)
     outlier_indices = detect_outliers(run_means_series)
     filtered_time_series = [run_time_series[i] for i in range(len(run_time_series)) if i not in outlier_indices]
@@ -182,7 +278,6 @@ def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_poin
     if not filtered_time_series:
         return None, None
 
-    # Use the longest run among the filtered runs to define the common grid
     max_times = [t[-1] for t in filtered_time_series]
     common_max_time = max(max_times)
     common_grid = np.linspace(0, common_max_time, grid_points)
@@ -190,7 +285,6 @@ def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_poin
     interpolated_power = []
     for t, power in zip(filtered_time_series, filtered_power_series):
         try:
-            # Extend shorter runs by carrying the last value forward.
             interp_func = interp1d(t, power, kind="linear", bounds_error=False, fill_value=(power[0], power[-1]))
             interp_power = interp_func(common_grid)
             interpolated_power.append(interp_power)
@@ -206,10 +300,18 @@ def compute_average_time_series(model, os_name, image_type, runs=RUNS, grid_poin
 
 def plot_model_power_time_series(model):
     """
+    Plots average power usage over time for all OS-image combinations for a given model.
+
+    Parameters:
+        model (str): Model name.
+    """
+
+    """
     For the given model, creates one plot with six lines (one per OS–image_type combination).
     OS is distinguished by color and image type by line style. The x-axis is time in seconds and the y-axis
     shows average power usage (W).
     """
+
     plt.figure(figsize=(10, 7))
     for os_name in OS_LIST:
         for image_type in IMAGE_TYPES:
@@ -232,11 +334,20 @@ def plot_model_power_time_series(model):
 
 def plot_violin_overlap_single_figure(model, results, use_outliers="without_outliers"):
     """
+    Generates overlapping violin plots comparing 'base' and 'cpu-optimized' for each OS.
+
+    Parameters:
+        model (str): Model identifier.
+        results (dict): Processed energy results.
+        use_outliers (str): Whether to use 'with_outliers' or 'without_outliers' data.
+    """
+
+    """
     Creates one figure per model with three x positions (one per OS).
     At each x position, two violin plots are drawn: one for 'base' and one for 'cpu-optimized',
     overlapping at the same position with partial transparency.
     """
-    # Define the OS order and positions along the x-axis
+
     os_list = ["ubuntu", "fedora", "debian"]
     x_positions = [1, 2, 3]
 
@@ -253,7 +364,6 @@ def plot_violin_overlap_single_figure(model, results, use_outliers="without_outl
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Plot the 'base' violins at x_positions
     vp_base = ax.violinplot(data_base,
                             positions=x_positions,
                             widths=0.6,
@@ -264,7 +374,6 @@ def plot_violin_overlap_single_figure(model, results, use_outliers="without_outl
         pc.set_facecolor("blue")
         pc.set_edgecolor("black")
 
-    # Plot the 'cpu-optimized' violins, also at x_positions
     vp_cpu = ax.violinplot(data_cpu,
                            positions=x_positions,
                            widths=0.6,
@@ -275,12 +384,10 @@ def plot_violin_overlap_single_figure(model, results, use_outliers="without_outl
         pc.set_facecolor("orange")
         pc.set_edgecolor("black")
 
-    # Add legend referencing the first 'body' from each group
     ax.legend([vp_base['bodies'][0], vp_cpu['bodies'][0]],
               ["Base", "CPU-Optimized"],
               loc="upper right")
 
-    # Label the x-axis with OS names
     ax.set_xticks(x_positions)
     ax.set_xticklabels([os_name.capitalize() for os_name in os_list], fontsize=11)
 
@@ -293,7 +400,7 @@ def plot_violin_overlap_single_figure(model, results, use_outliers="without_outl
     fig.savefig(out_file, dpi=300)
     plt.close()
     print(f"Overlap violin plot saved for {model} -> {out_file}")
-# ----- Main Analysis -----
+
 results = {}
 
 for model in MODELS:
@@ -419,12 +526,6 @@ for model in MODELS:
 
 # Create a DataFrame from the summary rows
 summary_df = pd.DataFrame(summary_rows)
-
-# Optionally, sort the DataFrame for clarity (e.g. by llm, then os, then image_type)
 summary_df = summary_df.sort_values(by=["llm", "os", "image_type"]).reset_index(drop=True)
-
-# Print the summary table
 print(summary_df)
-
-# Optionally, save the table to a CSV file
 summary_df.to_csv(os.path.join(OUTPUT_DIR, "energy_consumption_summary.csv"), index=False)
