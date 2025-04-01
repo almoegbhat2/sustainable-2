@@ -229,6 +229,70 @@ def plot_model_power_time_series(model):
     plt.savefig(os.path.join(OUTPUT_DIR, f"{model}_power_timeseries.png"), dpi=300)
     plt.close()
 
+
+def plot_violin_overlap_single_figure(model, results, use_outliers="without_outliers"):
+    """
+    Creates one figure per model with three x positions (one per OS).
+    At each x position, two violin plots are drawn: one for 'base' and one for 'cpu-optimized',
+    overlapping at the same position with partial transparency.
+    """
+    # Define the OS order and positions along the x-axis
+    os_list = ["ubuntu", "fedora", "debian"]
+    x_positions = [1, 2, 3]
+
+    # Prepare the data for each OS
+    # data_base[i] = distribution for base image at OS = os_list[i]
+    # data_cpu[i]  = distribution for cpu-optimized image at OS = os_list[i]
+    data_base = []
+    data_cpu = []
+    for os_name in os_list:
+        series_base = results[model]["base"][os_name][use_outliers].dropna().tolist()
+        series_cpu = results[model]["cpu-optimized"][os_name][use_outliers].dropna().tolist()
+        data_base.append(series_base)
+        data_cpu.append(series_cpu)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot the 'base' violins at x_positions
+    vp_base = ax.violinplot(data_base,
+                            positions=x_positions,
+                            widths=0.6,
+                            showmeans=False,
+                            showmedians=True)
+    for pc in vp_base['bodies']:
+        pc.set_alpha(0.5)
+        pc.set_facecolor("blue")
+        pc.set_edgecolor("black")
+
+    # Plot the 'cpu-optimized' violins, also at x_positions
+    vp_cpu = ax.violinplot(data_cpu,
+                           positions=x_positions,
+                           widths=0.6,
+                           showmeans=False,
+                           showmedians=True)
+    for pc in vp_cpu['bodies']:
+        pc.set_alpha(0.5)
+        pc.set_facecolor("orange")
+        pc.set_edgecolor("black")
+
+    # Add legend referencing the first 'body' from each group
+    ax.legend([vp_base['bodies'][0], vp_cpu['bodies'][0]],
+              ["Base", "CPU-Optimized"],
+              loc="upper right")
+
+    # Label the x-axis with OS names
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels([os_name.capitalize() for os_name in os_list], fontsize=11)
+
+    ax.set_ylabel("Energy (J)", fontsize=12)
+    ax.set_title(f"{model.upper()} - Overlapping Violin Plots by OS", fontsize=13, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.6)
+
+    plt.tight_layout()
+    out_file = os.path.join("output", f"{model}_violin_overlap.png")
+    fig.savefig(out_file, dpi=300)
+    plt.close()
+    print(f"Overlap violin plot saved for {model} -> {out_file}")
 # ----- Main Analysis -----
 results = {}
 
@@ -265,16 +329,16 @@ for model in MODELS:
             print(f"Outliers Detected: {len(outliers)}")
         model_data[image_type] = type_data
 
-        # Generate violin plots for energy per image type
-        labels = [os.capitalize() for os in OS_LIST]
-        plot_violin([model_data[image_type][os]["with_outliers"] for os in OS_LIST],
-                    labels,
-                    f"{model.upper()} {image_type} - Energy With Outliers",
-                    f"{model}_{image_type}_energy_violin_with_outliers.png")
-        plot_violin([model_data[image_type][os]["without_outliers"] for os in OS_LIST],
-                    labels,
-                    f"{model.upper()} {image_type} - Energy Without Outliers",
-                    f"{model}_{image_type}_energy_violin_without_outliers.png")
+        # # Generate violin plots for energy per image type
+        # labels = [os.capitalize() for os in OS_LIST]
+        # plot_violin([model_data[image_type][os]["with_outliers"] for os in OS_LIST],
+        #             labels,
+        #             f"{model.upper()} {image_type} - Energy With Outliers",
+        #             f"{model}_{image_type}_energy_violin_with_outliers.png")
+        # plot_violin([model_data[image_type][os]["without_outliers"] for os in OS_LIST],
+        #             labels,
+        #             f"{model.upper()} {image_type} - Energy Without Outliers",
+        #             f"{model}_{image_type}_energy_violin_without_outliers.png")
 
     results[model] = model_data
 
@@ -310,5 +374,57 @@ for model in MODELS:
 # Aggregated Time Series Plots for Energy
 for model in MODELS:
     plot_model_power_time_series(model)
+    plot_violin_overlap_single_figure(model, results, use_outliers="without_outliers")
 
 print("\nAnalysis complete. Results saved in the 'output/' directory.")
+
+summary_rows = []
+for model in MODELS:
+    for image_type in IMAGE_TYPES:
+        for os_name in OS_LIST:
+            # Extract the energy series for the current combo from the results dictionary
+            data_dict = results[model][image_type][os_name]
+            series_with = data_dict["with_outliers"]
+            series_without = data_dict["without_outliers"]
+
+            # Compute descriptive statistics for the full data (with outliers)
+            n_with = len(series_with)
+            mean_with = series_with.mean()
+            median_with = series_with.median()
+            std_with = series_with.std()
+
+            # Compute descriptive statistics for the filtered data (without outliers)
+            n_without = len(series_without)
+            mean_without = series_without.mean()
+            median_without = series_without.median()
+            std_without = series_without.std()
+
+            # Determine the number of outliers
+            num_outliers = n_with - n_without
+
+            summary_rows.append({
+                "llm": model,
+                "os": os_name,
+                "image_type": image_type,
+                "n_with": n_with,
+                "mean_with": mean_with,
+                "median_with": median_with,
+                "std_with": std_with,
+                "n_without": n_without,
+                "mean_without": mean_without,
+                "median_without": median_without,
+                "std_without": std_without,
+                "num_outliers": num_outliers
+            })
+
+# Create a DataFrame from the summary rows
+summary_df = pd.DataFrame(summary_rows)
+
+# Optionally, sort the DataFrame for clarity (e.g. by llm, then os, then image_type)
+summary_df = summary_df.sort_values(by=["llm", "os", "image_type"]).reset_index(drop=True)
+
+# Print the summary table
+print(summary_df)
+
+# Optionally, save the table to a CSV file
+summary_df.to_csv(os.path.join(OUTPUT_DIR, "energy_consumption_summary.csv"), index=False)
